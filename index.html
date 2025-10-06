@@ -183,6 +183,9 @@
         let invaderBullets = [];
         let particles = [];
 
+        // Gameplay caps
+        const MAX_INVADER_BULLETS = 3; // máximo de proyectiles en pantalla disparados por los enemigos
+
         // Input handling
         const keys = {};
         document.addEventListener('keydown', (e) => {
@@ -424,7 +427,10 @@
 
         // Invaders shoot (triangles and hit squares)
         function invaderShoot(timeMultiplier) {
-            invaders.forEach(invader => {
+                    // If we've already reached the max allowed invader bullets, skip shooting this tick
+                    if (invaderBullets.length >= MAX_INVADER_BULLETS) return;
+
+                    invaders.forEach(invader => {
                 if (invader.alive && invader.isVisible) {
                     let shouldShoot = false;
                     let shootChance = 0;
@@ -437,6 +443,8 @@
                     }
                     
                     if (shouldShoot) {
+                        // Double-check limit before spawning each bullet (in case multiple invaders try to fire)
+                        if (invaderBullets.length >= MAX_INVADER_BULLETS) return;
                         // Triangles should aim at player's current position
                         if (invader.type.shape === 'triangle') {
                             const targetX = player.x + player.width / 2;
@@ -473,16 +481,19 @@
 
         // Square shoots immediately when hit
         function squareShoot(invader) {
-            invaderBullets.push({
-                x: invader.x + invader.width / 2 - 2,
-                y: invader.y + invader.height,
-                width: 4,
-                height: 10,
-                vx: 0,
-                vy: 3,
-                color: '#ff0000'
-            });
-            invader.hasShot = true;
+                    // Don't spawn if we've reached the global cap of invader bullets
+                    if (invaderBullets.length >= MAX_INVADER_BULLETS) return;
+
+                    invaderBullets.push({
+                        x: invader.x + invader.width / 2 - 2,
+                        y: invader.y + invader.height,
+                        width: 4,
+                        height: 10,
+                        vx: 0,
+                        vy: 3,
+                        color: '#ff0000'
+                    });
+                    invader.hasShot = true;
         }
 
         // Create explosion particles
@@ -721,11 +732,12 @@
             if (hitEdge && gameTime - lastDirectionChange > 30) {
                 invaderDirection *= -1;
                 lastDirectionChange = gameTime;
-                
-                // Move all alive invaders down
+
+                // Move all alive invaders down (reduced descent so the game is slower)
+                // Se ha reducido a la mitad: antes 20, ahora 10 para que desplacen hacia abajo más despacio
                 invaders.forEach(invader => {
                     if (invader.alive) {
-                        invader.y += 20 * timeMultiplier;
+                        invader.y += 10 * timeMultiplier;
                     }
                 });
             } else if (!hitEdge) {
