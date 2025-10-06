@@ -681,20 +681,41 @@
                 return bullet.y < canvas.height && bullet.x >= 0 && bullet.x <= canvas.width;
             });
 
-            // INVADER MOVEMENT - Fixed to exclude split diamonds from edge detection
+            // INVADER MOVEMENT - Edge detection
+            // We normally ignore split diamonds for edge detection so they don't
+            // prematurely flip the formation. However, if there are no remaining
+            // "main formation" invaders (e.g. only split diamonds are alive),
+            // we must include them; otherwise they can drift off-screen.
             let hitEdge = false;
             const margin = 10; // Safety margin from edges
             const adjustedInvaderSpeed = invaderSpeed * timeMultiplier;
-            
-            // Only check main formation invaders for edge collision, not split diamonds
+
+            // First, check only non-split (main formation) invaders
+            let mainCount = 0;
             invaders.forEach(invader => {
                 if (invader.alive && !invader.isDiamondSplit) {
+                    mainCount++;
                     const nextX = invader.x + invaderDirection * adjustedInvaderSpeed;
                     if (nextX <= margin || nextX >= canvas.width - invader.width - margin) {
                         hitEdge = true;
                     }
                 }
             });
+
+            // If there are no main formation invaders left, include all alive
+            // invaders (including split diamonds) in the edge check so they
+            // can't move off-screen when they're the last ones.
+            if (!hitEdge && mainCount === 0) {
+                invaders.forEach(invader => {
+                    if (invader.alive) {
+                        const w = invader.width || 20;
+                        const nextX = invader.x + invaderDirection * adjustedInvaderSpeed;
+                        if (nextX <= margin || nextX >= canvas.width - w - margin) {
+                            hitEdge = true;
+                        }
+                    }
+                });
+            }
 
             // Prevent rapid direction changes
             if (hitEdge && gameTime - lastDirectionChange > 30) {
